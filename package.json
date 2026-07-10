@@ -1,0 +1,14 @@
+{
+  "name": "floor-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FloorPlanner — Planowanie układania podłóg",
+  "scripts": {
+    "dev": "live-server --port=3000 --no-browser",
+    "test": "node tests/run.js",
+    "test:watch": "node tests/run.js --watch"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}

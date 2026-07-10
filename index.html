@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FloorPlanner — Planowanie Układania Podłóg</title>
+  <meta name="description" content="Narzędzie do planowania optymalnego układania paneli, desek i płytek podłogowych. Rysuj pomieszczenia i znajdź najlepszą pozycję startową.">
+
+  <!-- Fonts are loaded via CSS @import -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Favicon (inline SVG) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23E8A849'/><path d='M8 8h6v16H8zM18 8h6v10H18zM18 22h6v2H18z' fill='%230C0E12' opacity='.8'/></svg>">
+</head>
+<body>
+
+  <!-- ═══ Toolbar ═══ -->
+  <header class="toolbar" role="toolbar" aria-label="Narzędzia">
+
+    <!-- Brand + Project Name -->
+    <div class="toolbar__brand">
+      <div class="toolbar__brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="18" rx="1"/>
+          <rect x="14" y="3" width="7" height="11" rx="1"/>
+          <rect x="14" y="17" width="7" height="4" rx="1"/>
+        </svg>
+      </div>
+      <span class="toolbar__brand-name">FloorPlanner</span>
+      <span class="toolbar__divider-vert" aria-hidden="true"></span>
+      <button class="toolbar__project-btn" id="btn-project" title="Zarządzaj projektami (Ctrl+O)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;flex-shrink:0">
+          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2v11z"/>
+        </svg>
+        <span id="project-name">Nowy projekt</span>
+        <span class="dirty-indicator" id="dirty-indicator" style="display:none">*</span>
+      </button>
+    </div>
+
+    <!-- Drawing Tools -->
+    <div class="toolbar__tools" role="group" aria-label="Narzędzia rysowania">
+      <button class="tool-btn active" data-tool="wall" title="Rysuj ścianę (W)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 21V3h18v18H3z"/>
+          <path d="M3 12h18"/>
+          <path d="M12 3v18"/>
+        </svg>
+        <span>Ściana</span>
+        <span class="shortcut">W</span>
+      </button>
+
+      <button class="tool-btn" data-tool="door" title="Dodaj drzwi (D)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 3h14v18H5z"/>
+          <path d="M9 3v18"/>
+          <path d="M9 12h4"/>
+          <circle cx="14" cy="12" r="1"/>
+        </svg>
+        <span>Drzwi</span>
+        <span class="shortcut">D</span>
+      </button>
+
+      <button class="tool-btn" data-tool="select" title="Zaznacz / Edytuj (V)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+          <path d="M13 13l6 6"/>
+        </svg>
+        <span>Zaznacz</span>
+        <span class="shortcut">V</span>
+      </button>
+
+      <button class="tool-btn" data-tool="delete" title="Usuń ścianę (Del)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/>
+          <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+        <span>Usuń</span>
+        <span class="shortcut">Del</span>
+      </button>
+
+      <div class="toolbar__divider" aria-hidden="true"></div>
+
+      <button class="tool-btn" id="btn-undo" title="Cofnij (Ctrl+Z)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7v6h6"/>
+          <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/>
+        </svg>
+      </button>
+
+      <button class="tool-btn" id="btn-redo" title="Ponów (Ctrl+Shift+Z)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 7v6h-6"/>
+          <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Actions -->
+    <div class="toolbar__actions">
+      <label class="toggle" title="Przyciąganie do siatki (G)">
+        <input type="checkbox" id="snap-grid" checked>
+        <span>Siatka</span>
+      </label>
+
+      <div class="zoom-controls">
+        <button id="zoom-out" title="Oddal">−</button>
+        <span class="zoom-controls__level" id="zoom-level">100%</span>
+        <button id="zoom-in" title="Przybliż">+</button>
+        <button class="zoom-controls__fit" id="zoom-fit" title="Dopasuj widok">Dopasuj</button>
+      </div>
+
+      <button class="btn-primary" id="btn-optimize" title="Oblicz optymalny układ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        Optymalizuj
+      </button>
+    </div>
+
+  </header>
+
+  <!-- ═══ Main Layout ═══ -->
+  <div class="app-layout">
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar" role="complementary" aria-label="Konfiguracja">
+
+      <!-- Section: Rooms (auto-detected from walls) -->
+      <section class="sidebar__section" data-section="rooms">
+        <div class="sidebar__section-header">
+          <h3>Pokoje</h3>
+          <div style="display:flex;gap:4px;align-items:center">
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+        </div>
+        <div class="sidebar__section-content">
+          <ul class="room-list" id="room-list">
+            <li class="room-list__empty" id="rooms-empty">
+              Narysuj ściany (W),<br>aby automatycznie wykryć pokoje
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Section: Wall Settings (visible when wall tool active) -->
+      <section class="sidebar__section" data-section="walls" id="section-walls" style="display:none">
+        <div class="sidebar__section-header">
+          <h3>Ściany</h3>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+        <div class="sidebar__section-content">
+          <div class="form-group">
+            <label for="wall-thickness">Grubość ściany (mm)</label>
+            <select id="wall-thickness">
+              <option value="80">80 mm — Karton-gips cienki</option>
+              <option value="100">100 mm — Karton-gips</option>
+              <option value="120">120 mm — Karton-gips podwójny</option>
+              <option value="150" selected>150 mm — Cegła</option>
+              <option value="200">200 mm — Bloczek</option>
+              <option value="240">240 mm — Ściana zewnętrzna</option>
+              <option value="300">300 mm — Ściana nośna</option>
+              <option value="380">380 mm — Ściana nośna gruba</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="wall-reference">Rysowanie od</label>
+            <select id="wall-reference">
+              <option value="axis" selected>Osi ściany</option>
+              <option value="inner">Krawędzi podłogi (wnętrza)</option>
+            </select>
+            <p class="form-hint" id="wall-reference-hint" style="display:none">
+              Klikane punkty i wpisywane długości to wymiary podłogi.
+              Klawisz <b>F</b> przełącza stronę ściany.
+            </p>
+          </div>
+          <div class="form-group">
+            <label for="wall-type">Typ ściany</label>
+            <select id="wall-type">
+              <option value="interior" selected>Wewnętrzna</option>
+              <option value="exterior">Zewnętrzna</option>
+              <option value="partition">Działowa</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Door Settings (visible when door tool active) -->
+      <section class="sidebar__section" data-section="doors" id="section-doors" style="display:none">
+        <div class="sidebar__section-header">
+          <h3>Drzwi</h3>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+        <div class="sidebar__section-content">
+          <div class="form-group">
+            <label for="door-width">Szerokość otworu (mm)</label>
+            <select id="door-width">
+              <option value="600">600 mm</option>
+              <option value="700">700 mm</option>
+              <option value="800" selected>800 mm — Standard</option>
+              <option value="900">900 mm</option>
+              <option value="1000">1000 mm</option>
+              <option value="1200">1200 mm — Dwuskrzydłowe</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="door-hinge-side">Strona zawiasów</label>
+            <select id="door-hinge-side">
+              <option value="left" selected>Lewy</option>
+              <option value="right">Prawy</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="door-open-direction">Kierunek otwarcia</label>
+            <select id="door-open-direction">
+              <option value="A" selected>Strona A</option>
+              <option value="B">Strona B</option>
+            </select>
+          </div>
+          <div class="form-hint" id="door-hint" style="display:none">
+            <span class="form-hint__keys">← → strona zawiasów &nbsp;·&nbsp; ↑ ↓ kierunek otwarcia</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Material -->
+      <section class="sidebar__section" data-section="material">
+        <div class="sidebar__section-header">
+          <h3>Materiał</h3>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+        <div class="sidebar__section-content">
+          <div class="form-group">
+            <label for="material-preset">Preset</label>
+            <!-- Options generated by Sidebar._rebuildPresetDropdown() from presets.js -->
+            <select id="material-preset"></select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="panel-length">Długość (mm)</label>
+              <input type="number" id="panel-length" value="1380" min="100" max="5000" step="1">
+            </div>
+            <div class="form-group">
+              <label for="panel-width">Szerokość (mm)</label>
+              <input type="number" id="panel-width" value="193" min="50" max="2000" step="1">
+            </div>
+          </div>
+
+          <button class="btn-secondary" id="btn-save-preset">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Zapisz jako preset
+          </button>
+        </div>
+      </section>
+
+      <!-- Section: Laying Settings -->
+      <section class="sidebar__section" data-section="settings">
+        <div class="sidebar__section-header">
+          <h3>Ustawienia układania</h3>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+        <div class="sidebar__section-content">
+          <div class="form-group">
+            <label for="expansion-gap">Dylatacja przy ścianie (mm)</label>
+            <input type="number" id="expansion-gap" value="10" min="5" max="25" step="1">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="min-cut-width">Min. szer. docinki (mm)</label>
+              <input type="number" id="min-cut-width" value="50" min="10" max="200" step="5">
+            </div>
+            <div class="form-group">
+              <label for="min-cut-length">Min. dł. docinki (mm)</label>
+              <input type="number" id="min-cut-length" value="300" min="50" max="1000" step="10">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="laying-pattern">Wzór układania</label>
+            <select id="laying-pattern">
+              <option value="straight" selected>Klasyczny (prosty)</option>
+              <option value="herringbone">Jodełka klasyczna 45°</option>
+            </select>
+          </div>
+
+          <!-- Direction applies to both patterns: straight = panel axis, herringbone = chevron row axis -->
+          <div class="form-group">
+            <label id="direction-label">Kierunek układania</label>
+            <div class="direction-toggle" id="direction-toggle">
+              <button class="active" data-direction="0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <line x1="3" y1="12" x2="21" y2="12"/>
+                  <polyline points="16 7 21 12 16 17"/>
+                </svg>
+                Poziomo
+              </button>
+              <button data-direction="90">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <line x1="12" y1="3" x2="12" y2="21"/>
+                  <polyline points="7 16 12 21 17 16"/>
+                </svg>
+                Pionowo
+              </button>
+            </div>
+          </div>
+
+          <div id="straight-only-settings">
+          <div class="form-group">
+            <label for="stagger-pattern">Przesunięcie rzędów</label>
+            <select id="stagger-pattern">
+              <option value="third" selected>1/3 długości panela</option>
+              <option value="half">1/2 długości panela</option>
+              <option value="random">Losowe (min. 30cm)</option>
+              <option value="none">Brak (płytki kwadratowe)</option>
+            </select>
+          </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Floor Offset (visible after optimization) -->
+      <section class="sidebar__section" data-section="floor-offset" id="section-floor-offset" style="display:none">
+        <div class="sidebar__section-header">
+          <h3>Korekta pozycji podłogi</h3>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+        <div class="sidebar__section-content">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="floor-offset-x">Przesunięcie X (mm)</label>
+              <input type="number" id="floor-offset-x" value="0" min="0" step="1">
+            </div>
+            <div class="form-group">
+              <label for="floor-offset-y">Przesunięcie Y (mm)</label>
+              <input type="number" id="floor-offset-y" value="0" min="0" step="1">
+            </div>
+          </div>
+          <button class="btn-secondary" id="btn-offset-reset">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+              <path d="M1 4v6h6"/>
+              <path d="M3.51 15a9 9 0 105.39-9.37L1 10"/>
+            </svg>
+            Przywróć optymalne
+          </button>
+          <div class="form-hint offset-hint" id="offset-hint">
+            <span id="offset-hint-text"></span>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- ── Canvas Area ── -->
+    <main class="canvas-area" role="main" aria-label="Obszar rysowania">
+      <div class="canvas-container" id="canvas-container" data-tool="draw">
+        <canvas id="grid-canvas" aria-hidden="true"></canvas>
+        <canvas id="room-canvas" aria-hidden="true"></canvas>
+        <canvas id="layout-canvas" aria-hidden="true"></canvas>
+        <canvas id="overlay-canvas" aria-label="Interaktywny canvas do rysowania pomieszczeń" tabindex="0"></canvas>
+      </div>
+      <div class="canvas-info">
+        <span>
+          <span class="canvas-info__dot"></span>
+          <span id="cursor-coords">X: 0 &nbsp; Y: 0</span>
+        </span>
+        <span>
+          <span id="active-tool-label">Narzędzie: Rysuj</span>
+          &nbsp;·&nbsp;
+          <span id="canvas-scale">Skala: 1cm = 2px</span>
+        </span>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ═══ Summary Panel ═══ -->
+  <footer class="summary-panel closed" id="summary-panel">
+    <div class="summary-panel__toggle" id="summary-toggle">
+      <span>Podsumowanie materiałowe</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"/>
+      </svg>
+    </div>
+    <div class="summary-panel__content">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span class="summary-label">Powierzchnia</span>
+          <span class="summary-value" id="summary-area">— m²</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Panele potrzebne</span>
+          <span class="summary-value" id="summary-panels">—</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">W tym docinane</span>
+          <span class="summary-value" id="summary-cuts">—</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Odpady</span>
+          <span class="summary-value" id="summary-waste">— m²</span>
+        </div>
+      </div>
+      <div class="summary-warnings" id="summary-warnings"></div>
+    </div>
+  </footer>
+
+  <!-- ═══ Save Preset Modal ═══ -->
+  <div class="modal-overlay" id="preset-modal">
+    <div class="modal">
+      <h3>Zapisz preset materiału</h3>
+      <div class="form-group">
+        <label for="preset-name">Nazwa presetu</label>
+        <input type="text" id="preset-name" placeholder="np. Mój panel dębowy">
+      </div>
+      <div class="modal__actions">
+        <button class="btn-secondary" id="preset-cancel" style="width:auto">Anuluj</button>
+        <button class="btn-primary" id="preset-save" style="padding:var(--sp-2) var(--sp-5)">Zapisz</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Project Manager Modal ═══ -->
+  <div class="modal-overlay" id="project-modal">
+    <div class="modal modal--wide">
+      <div class="modal__header">
+        <h3>Projekty</h3>
+        <button class="btn-icon" id="project-modal-close" title="Zamknij">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="project-actions">
+        <button class="btn-primary btn-sm" id="btn-project-new">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Nowy projekt
+        </button>
+        <button class="btn-secondary btn-sm" id="btn-project-save">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          Zapisz
+        </button>
+        <button class="btn-secondary btn-sm" id="btn-project-save-as">Zapisz jako...</button>
+        <div style="flex:1"></div>
+        <button class="btn-secondary btn-sm" id="btn-project-import">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Importuj .fp
+        </button>
+        <button class="btn-secondary btn-sm" id="btn-project-export">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Eksportuj .fp
+        </button>
+      </div>
+
+      <div class="project-list" id="project-list">
+        <div class="project-list__empty" id="project-list-empty">
+          Brak zapisanych projektów
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Scripts (dependency order) ═══ -->
+  <script src="js/event-bus.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/command-manager.js"></script>
+  <script src="js/data/presets.js"></script>
+  <script src="js/engine/geometry.js"></script>
+  <script src="js/engine/polygon-clip.js"></script>
+  <script src="js/data/wall-graph.js"></script>
+  <script src="js/data/project-manager.js"></script>
+  <script src="js/tools/snap-system.js"></script>
+  <script src="js/tools/dimension-input.js"></script>
+  <script src="js/tools/wall-tool.js"></script>
+  <script src="js/tools/door-tool.js"></script>
+  <script src="js/commands/wall-commands.js"></script>
+  <script src="js/canvas/viewport.js"></script>
+  <script src="js/canvas/grid-layer.js"></script>
+  <script src="js/canvas/wall-layer.js"></script>
+  <script src="js/engine/grid-generator.js"></script>
+  <script src="js/engine/herringbone-generator.js"></script>
+  <script src="js/engine/layout-engine.js"></script>
+  <script src="js/engine/layout-scorer.js"></script>
+  <script src="js/engine/optimizer.js"></script>
+  <script src="js/canvas/layout-layer.js"></script>
+  <script src="js/ui/toolbar.js"></script>
+  <script src="js/ui/sidebar.js"></script>
+  <script src="js/ui/summary-panel.js"></script>
+  <script src="js/ui/project-panel.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>

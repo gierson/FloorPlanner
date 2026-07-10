@@ -181,7 +181,7 @@ class FloorPlannerApp {
 
       try {
         const results = new Map();
-        let totalArea = 0, totalWaste = 0, totalPanels = 0, totalCuts = 0, totalProblematic = 0;
+        const statsList = [];
         const allWarnings = [];
 
         for (const [roomId, insetPoly] of ctx.insetPolygons) {
@@ -198,11 +198,7 @@ class FloorPlannerApp {
             bestOffsetY: offsetY,
           });
 
-          totalArea += layout.stats.totalArea;
-          totalWaste += layout.stats.wasteArea;
-          totalPanels += layout.stats.totalPanels;
-          totalCuts += layout.stats.cutPanels;
-          totalProblematic += layout.stats.problematicPanels || 0;
+          statsList.push(layout.stats);
 
           for (const w of (layout.stats.warnings || [])) {
             const zone = ctx.zones.find(z => z.id === roomId);
@@ -212,18 +208,7 @@ class FloorPlannerApp {
 
         const adjustedResult = {
           results,
-          aggregateStats: {
-            totalArea,
-            totalWaste,
-            wastePercent: totalArea > 0
-              ? (totalWaste / (totalArea + totalWaste)) * 100
-              : 0,
-            totalPanels,
-            totalCuts,
-            totalProblematic,
-            panelsNeeded: Math.ceil((totalArea + totalWaste) /
-              ((ctx.config.panelLength * ctx.config.panelWidth) / 1e6)),
-          },
+          aggregateStats: WasteCalculator.aggregate(statsList),
           warnings: allWarnings,
         };
 

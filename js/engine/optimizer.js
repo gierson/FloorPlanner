@@ -18,22 +18,13 @@ const layoutOptimizer = {
    */
   optimizeAll(rooms, config) {
     const results = new Map();
-    let totalArea = 0;
-    let totalWaste = 0;
-    let totalPanels = 0;
-    let totalCuts = 0;
-    let totalProblematic = 0;
+    const statsList = [];
     const allWarnings = [];
 
     for (const room of rooms) {
       const result = this.optimizeRoom(room, config);
       results.set(room.id, result);
-
-      totalArea += result.stats.totalArea;
-      totalWaste += result.stats.wasteArea;
-      totalPanels += result.stats.totalPanels;
-      totalCuts += result.stats.cutPanels;
-      totalProblematic += result.stats.problematicPanels || 0;
+      statsList.push(result.stats);
 
       for (const w of (result.stats.warnings || [])) {
         allWarnings.push({ ...w, roomId: room.id, roomName: room.name });
@@ -42,18 +33,7 @@ const layoutOptimizer = {
 
     return {
       results,
-      aggregateStats: {
-        totalArea,
-        totalWaste,
-        wastePercent: totalArea > 0
-          ? (totalWaste / (totalArea + totalWaste)) * 100
-          : 0,
-        totalPanels,
-        totalCuts,
-        totalProblematic,
-        panelsNeeded: Math.ceil((totalArea + totalWaste) / 
-          ((config.panelLength * config.panelWidth) / 1e6)),
-      },
+      aggregateStats: WasteCalculator.aggregate(statsList),
       warnings: allWarnings,
     };
   },

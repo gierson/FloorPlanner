@@ -46,7 +46,12 @@ class SummaryPanel {
     const stats = data.aggregateStats;
 
     this._animateValue('summary-area', `${stats.totalArea.toFixed(2)} m²`);
-    this._animateValue('summary-panels', `${stats.totalPanels}`);
+
+    // Boards to buy — herringbone reports A/B (mirror-image) boards
+    const panelsText = stats.panelsNeededA != null
+      ? `${stats.panelsNeeded} (A: ${stats.panelsNeededA} + B: ${stats.panelsNeededB})`
+      : `${stats.panelsNeeded}`;
+    this._animateValue('summary-panels', panelsText);
     this._animateValue('summary-cuts', `${stats.totalCuts}`);
 
     const wasteEl = document.getElementById('summary-waste');

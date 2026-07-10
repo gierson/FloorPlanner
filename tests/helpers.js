@@ -28,6 +28,7 @@ const SOURCE_FILES = [
   'js/commands/wall-commands.js',
   'js/engine/grid-generator.js',
   'js/engine/herringbone-generator.js',
+  'js/engine/waste-calculator.js',
   'js/engine/layout-engine.js',
   'js/engine/layout-scorer.js',
   'js/engine/optimizer.js',

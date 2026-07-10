@@ -388,9 +388,6 @@ const LayoutEngine = {
    * @private
    */
   _computeStats(panels, config) {
-    const { panelLength, panelWidth } = config;
-    const boardArea = panelLength * panelWidth;
-
     let totalPanels = panels.length;
     let cutPanels = 0;
     let problematicPanels = 0;
@@ -429,8 +426,10 @@ const LayoutEngine = {
       }
     }
 
-    const panelsNeeded = Math.ceil(totalArea / boardArea);
-    const wasteArea = panelsNeeded * boardArea - totalArea;
+    // Realistic purchase count: tongue-and-groove offcut reuse rules
+    // (straight: opposite-wall pairing; herringbone: A/B boards,
+    // conservative — diagonal offcuts are waste)
+    const purchase = WasteCalculator.compute(panels, config);
 
     return {
       totalPanels,
@@ -439,12 +438,15 @@ const LayoutEngine = {
       problematicPanels,
       fieldCutCount,
       totalArea: totalArea / 1e6,        // mm² → m²
-      wasteArea: wasteArea / 1e6,
+      wasteArea: purchase.wasteArea / 1e6,
       wastePercent: totalArea > 0
-        ? (wasteArea / (totalArea + wasteArea)) * 100
+        ? (purchase.wasteArea / (totalArea + purchase.wasteArea)) * 100
         : 0,
       minCut: minCutDim === Infinity ? null : minCutDim,
-      panelsNeeded,
+      panelsNeeded: purchase.panelsNeeded,
+      panelsNeededA: purchase.panelsNeededA,
+      panelsNeededB: purchase.panelsNeededB,
+      reusedPairs: purchase.reusedPairs,
       warnings,
     };
   },
@@ -458,7 +460,9 @@ const LayoutEngine = {
       totalPanels: 0, cutPanels: 0, fullPanels: 0,
       problematicPanels: 0, fieldCutCount: 0,
       totalArea: 0, wasteArea: 0, wastePercent: 0,
-      minCut: null, panelsNeeded: 0, warnings: [],
+      minCut: null, panelsNeeded: 0,
+      panelsNeededA: null, panelsNeededB: null, reusedPairs: 0,
+      warnings: [],
     };
   },
 };
